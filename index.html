@@ -1,0 +1,1810 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<title>JUMP.EXE (EN)</title>
+<style>
+  :root{
+    --bg:#07080c;
+    --neon:#6cf0ff;
+    --neon2:#ff4bd8;
+    --win:#c0c0c0;
+    --win2:#e8e8e8;
+    --log:#0b0f14;
+    --logInk:#b8c7d6;
+    --title:#0a2a8a;
+    --title2:#0b4bdc;
+    --crtA:0.18;
+    --crtB:0.06;
+  }
+  html,body{height:100%; background:var(--bg); margin:0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;}
+  body{overflow:hidden; touch-action:none; -webkit-user-select:none; user-select:none;}
+
+  .stage{
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(60% 60% at 50% 30%, rgba(108,240,255,0.08), transparent 60%),
+      radial-gradient(45% 45% at 20% 70%, rgba(255,75,216,0.07), transparent 60%),
+      radial-gradient(45% 45% at 80% 70%, rgba(120,120,255,0.05), transparent 60%),
+      linear-gradient(180deg, #05060a, #07080c 60%, #04060a);
+  }
+
+  .win{
+    width:min(980px, calc(100vw - 16px));
+    height:min(720px, calc(100vh - 16px));
+    background:var(--win);
+    border:2px solid #fff;
+    box-shadow:
+      0 0 0 2px #000,
+      0 10px 30px rgba(0,0,0,.55),
+      0 0 40px rgba(108,240,255,0.12),
+      0 0 60px rgba(255,75,216,0.08);
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    transform:translateZ(0);
+  }
+  .bevel{
+    position:absolute; inset:0;
+    pointer-events:none;
+    box-shadow:
+      inset 2px 2px 0 #f7f7f7,
+      inset -2px -2px 0 #7a7a7a,
+      inset 4px 4px 0 #dcdcdc,
+      inset -4px -4px 0 #4a4a4a;
+  }
+  .titlebar{
+    height:34px;
+    background:linear-gradient(90deg, var(--title), var(--title2));
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 8px;
+    letter-spacing:0.5px;
+    font-size:13px;
+    flex:0 0 auto;
+    border-bottom:2px solid #000;
+  }
+  .titlebar .left{display:flex; align-items:center; gap:8px;}
+  .appdot{
+    width:14px; height:14px; background:#000;
+    box-shadow: inset 2px 2px 0 rgba(255,255,255,.2);
+    position:relative;
+  }
+  .appdot:after{
+    content:"";
+    position:absolute; inset:3px;
+    background:linear-gradient(180deg, var(--neon), var(--neon2));
+  }
+  .closebtn{
+    width:22px; height:18px;
+    background:var(--win2);
+    border:2px solid #fff;
+    box-shadow: inset -2px -2px 0 #7a7a7a, inset 2px 2px 0 #fff, 0 0 0 1px #000;
+    display:grid; place-items:center;
+    cursor:pointer;
+    color:#111;
+    font-weight:700;
+    line-height:1;
+    user-select:none;
+  }
+  .closebtn:active{transform:translateY(1px);}
+
+  .client{
+    position:relative;
+    flex:1 1 auto;
+    display:grid;
+    grid-template-rows: 1fr 150px 56px;
+    gap:0;
+    background:linear-gradient(180deg, #0b0f14, #07080c);
+    border-top:2px solid #fff;
+  }
+
+  .view{
+    position:relative;
+    overflow:hidden;
+    background:#05060a;
+  }
+  canvas{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+  }
+
+  .crt{position:absolute; inset:0; pointer-events:none; mix-blend-mode:screen; opacity:.95; z-index:4;}
+  .scanlines{
+    background:
+      repeating-linear-gradient(
+        180deg,
+        rgba(255,255,255, var(--crtB)) 0px,
+        rgba(255,255,255, var(--crtB)) 1px,
+        rgba(0,0,0, 0.00) 2px,
+        rgba(0,0,0, 0.00) 4px
+      );
+    animation: scan 4.5s linear infinite;
+    opacity:.7;
+  }
+  @keyframes scan{0%{transform:translateY(0);}100%{transform:translateY(24px);}}
+  .vignette{
+    background: radial-gradient(80% 70% at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.55) 100%);
+    opacity:.9;
+    mix-blend-mode:multiply;
+  }
+  .noise{
+    opacity:var(--crtA);
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+    background-size:180px 180px;
+    animation: noise 650ms steps(2,end) infinite;
+    mix-blend-mode:overlay;
+  }
+  @keyframes noise{
+    0%{transform:translate3d(0,0,0);}
+    50%{transform:translate3d(-20px,10px,0);}
+    100%{transform:translate3d(10px,-18px,0);}
+  }
+
+  .caption{
+    position:absolute;
+    left:10px; top:10px; right:10px;
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    pointer-events:none;
+    z-index:5;
+  }
+  .capbox{
+    background:rgba(8,12,18,.72);
+    border:1px solid rgba(108,240,255,.25);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 0 18px rgba(108,240,255,.12);
+    color:#d6e7ff;
+    padding:8px 10px;
+    font-size:12px;
+    letter-spacing:.2px;
+    max-width:70%;
+    text-shadow:0 0 8px rgba(108,240,255,.25);
+  }
+  .metric{
+    min-width:210px;
+    text-align:right;
+    font-variant-numeric: tabular-nums;
+    background:rgba(8,12,18,.72);
+    border:1px solid rgba(255,75,216,.2);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.6), 0 0 18px rgba(255,75,216,.10);
+    color:#ffd6f3;
+    padding:8px 10px;
+    font-size:12px;
+    text-shadow:0 0 8px rgba(255,75,216,.18);
+  }
+
+  .syslog{
+    background:var(--log);
+    border-top:2px solid #000;
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.08);
+    padding:8px 10px;
+    color:var(--logInk);
+    font-size:12px;
+    overflow:auto;
+    line-height:1.35;
+  }
+  .sysline{white-space:pre-wrap;}
+  .sysline .tag{color:rgba(108,240,255,.95); text-shadow:0 0 10px rgba(108,240,255,.25);}
+  .sysline .bad{color:rgba(255,75,216,.95); text-shadow:0 0 10px rgba(255,75,216,.20);}
+  .sysline .dim{color:rgba(184,199,214,.65);}
+
+  .controls{
+    background:var(--win);
+    border-top:2px solid #fff;
+    box-shadow: inset 0 2px 0 #f7f7f7;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:8px;
+    gap:8px;
+  }
+  .btn{
+    flex:1 1 auto;
+    height:40px;
+    background:var(--win2);
+    border:2px solid #fff;
+    box-shadow: inset -2px -2px 0 #7a7a7a, inset 2px 2px 0 #fff, 0 0 0 1px #000;
+    font-weight:700;
+    color:#111;
+    letter-spacing:1px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn.secondary{max-width:220px;}
+  .btn.disabled{opacity:.55; filter:grayscale(.3); cursor:not-allowed;}
+
+  .modal{
+    position:absolute; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    background:rgba(0,0,0,.45);
+    z-index:10;
+  }
+  .modal.on{display:flex;}
+  .panel{
+    width:min(560px, calc(100% - 18px));
+    background:var(--win);
+    border:2px solid #fff;
+    box-shadow: 0 0 0 2px #000, 0 18px 60px rgba(0,0,0,.6), 0 0 40px rgba(108,240,255,.12);
+  }
+  .panel .ptitle{
+    height:28px;
+    background:linear-gradient(90deg, #0a2a8a, #0b4bdc);
+    color:#fff;
+    display:flex; align-items:center;
+    padding:0 8px;
+    font-size:12px;
+    border-bottom:2px solid #000;
+    justify-content:space-between;
+  }
+  .panel .pbody{
+    padding:10px 10px 8px;
+    background:linear-gradient(180deg, #0b0f14, #07080c);
+    color:#d6e7ff;
+    font-size:12px;
+    border-top:2px solid #fff;
+  }
+  .panel .pbody .hint{
+    color:rgba(214,231,255,.75);
+    font-size:11px;
+    margin-top:8px;
+  }
+  .panel .pactions{
+    padding:8px;
+    display:flex; gap:8px;
+    background:var(--win);
+    border-top:2px solid #fff;
+    justify-content:flex-end;
+  }
+  .panel .pactions .btn{flex:0 0 auto; min-width:140px;}
+  .panel .pactions .btn.danger{
+    box-shadow: inset -2px -2px 0 #7a7a7a, inset 2px 2px 0 #fff, 0 0 0 1px #000, 0 0 18px rgba(255,75,216,.18);
+  }
+
+  .shake{ animation: shake .22s linear 1; }
+  @keyframes shake{
+    0%{transform:translate(0,0)}
+    20%{transform:translate(2px,-1px)}
+    40%{transform:translate(-2px,1px)}
+    60%{transform:translate(2px,1px)}
+    80%{transform:translate(-1px,-2px)}
+    100%{transform:translate(0,0)}
+  }
+  .flash::after{
+    content:"";
+    position:absolute; inset:0;
+    background:rgba(255,255,255,.22);
+    pointer-events:none;
+    animation: flash 120ms linear 1;
+  }
+  @keyframes flash{0%{opacity:1}100%{opacity:0}}
+
+  @media (max-width:560px){
+    .client{ grid-template-rows: 1fr 145px 60px; }
+    .syslog{ font-size:11px; }
+    .capbox,.metric{ font-size:11px; }
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="win" id="win">
+    <div class="titlebar">
+      <div class="left">
+        <div class="appdot"></div>
+        <div>JUMP.EXE — INTERACTIVE PROCESS</div>
+      </div>
+      <div class="closebtn" id="closeBtn">X</div>
+    </div>
+
+    <div class="client">
+      <div class="view" id="view">
+        <canvas id="base"></canvas>
+        <canvas id="glow"></canvas>
+
+        <div class="caption">
+          <div class="capbox" id="cap">…</div>
+          <div class="metric" id="metric">INIT…</div>
+        </div>
+
+        <div class="crt scanlines"></div>
+        <div class="crt noise"></div>
+        <div class="crt vignette"></div>
+
+        <div class="modal on" id="modal">
+          <div class="panel">
+            <div class="ptitle">
+              <span>JUMP.EXE</span>
+              <span style="opacity:.85">WIN98 SHELL</span>
+            </div>
+            <div class="pbody" id="modalBody">
+              <div style="font-weight:700; letter-spacing:.4px;">Initialization requires your consent.</div>
+              <div style="margin-top:8px; color:rgba(214,231,255,.9);">
+                Tap anywhere = <span style="color:var(--neon)">JUMP</span><br>
+                Hold right side = <span style="color:var(--neon2)">向上/加速</span><br>
+                Keyboard: W/↑ jump; E observe (still counts); Scene C/D: hold A or D to attempt escape.<br>
+                Mobile: hold far left/right edge for 1.5s = A/D hold.<br><br>
+                If you hear no sound: unmute your browser and press CONTINUE once (audio unlock).
+              </div>
+              <div class="hint">SYS&gt; Audio unlock requires user gesture (mobile Safari).</div>
+            </div>
+            <div class="pactions">
+              <button class="btn danger" id="btnInit">CONTINUE</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="syslog" id="syslog" aria-label="syslog"></div>
+
+      <div class="controls">
+        <button class="btn" id="btnJump">JUMP</button>
+        <button class="btn secondary disabled" id="btnChoice">CHOICE</button>
+      </div>
+    </div>
+
+    <div class="bevel"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const winEl = document.getElementById('win');
+  const viewEl = document.getElementById('view');
+  const base = document.getElementById('base');
+  const glow = document.getElementById('glow');
+  const bctx = base.getContext('2d');
+  const gctx = glow.getContext('2d');
+
+  const capEl = document.getElementById('cap');
+  const metricEl = document.getElementById('metric');
+  const syslogEl = document.getElementById('syslog');
+
+  const closeBtn = document.getElementById('closeBtn');
+  const btnInit = document.getElementById('btnInit');
+  const modal = document.getElementById('modal');
+  const modalBody = document.getElementById('modalBody');
+
+  const btnJump = document.getElementById('btnJump');
+  const btnChoice = document.getElementById('btnChoice');
+
+  function isModalOpen(){ return modal.classList.contains('on'); }
+  function isUiClickTarget(el){
+    return !!(el && el.closest && (el.closest('.panel') || el.closest('.pactions') || el.closest('button') || el.closest('.closebtn')));
+  }
+
+  document.addEventListener('touchmove', (e)=>e.preventDefault(), {passive:false});
+  document.addEventListener('wheel', (e)=>e.preventDefault(), {passive:false});
+
+  const DPR = () => Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+  let W=1,H=1,dpr=1;
+  function resize(){
+    dpr = DPR();
+    const r = viewEl.getBoundingClientRect();
+    W = Math.max(1, Math.floor(r.width * dpr));
+    H = Math.max(1, Math.floor(r.height * dpr));
+    base.width = W; base.height = H;
+    glow.width = W; glow.height = H;
+    bctx.imageSmoothingEnabled = false;
+    gctx.imageSmoothingEnabled = false;
+  }
+  window.addEventListener('resize', resize, {passive:true});
+  resize();
+
+  // ---------- SYSLOG ----------
+  const sysLines = [];
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+  function renderSyslog(){
+    syslogEl.innerHTML = sysLines.map(l => {
+      const c = l.cls || 'tag';
+      return `<div class="sysline"><span class="dim">${l.t}</span> <span class="${c}">${l.tag}</span> ${escapeHtml(l.text)}</div>`;
+    }).join('');
+    syslogEl.scrollTop = syslogEl.scrollHeight;
+  }
+  function sys(tag, text, cls='tag'){
+    const ts = new Date();
+    const hh = String(ts.getHours()).padStart(2,'0');
+    const mm = String(ts.getMinutes()).padStart(2,'0');
+    const ss = String(ts.getSeconds()).padStart(2,'0');
+    sysLines.push({t:`${hh}:${mm}:${ss}`, tag, text, cls});
+    if (sysLines.length > 240) sysLines.shift();
+    renderSyslog();
+  }
+
+  // ---------- AUDIO (FIXED: UNLOCK/RESUME) ----------
+  let audioCtx = null;
+  let liveLoop = null;
+  let globalDrone = null;
+  let globalNoise = null;
+  let audioUnlocked = false;
+
+  function ensureAudio(){
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  async function unlockAudio(){
+    try{
+      const ctx = ensureAudio();
+      if (ctx.state === 'suspended') await ctx.resume();
+      if (!audioUnlocked){
+        audioUnlocked = true;
+        sys('SYS>','AUDIO CONTEXT: UNLOCKED');
+        // a tiny silent blip to prove it
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        g.gain.value = 0.0001;
+        o.connect(g); g.connect(ctx.destination);
+        o.frequency.value = 440;
+        o.start(); o.stop(ctx.currentTime + 0.02);
+      }
+      return true;
+    }catch(e){
+      sys('SYS>','AUDIO CONTEXT: FAILED', 'bad');
+      return false;
+    }
+  }
+  function envGain(g, t0, a=0.0001, b=0.06, tA=0.01, tR=0.08){
+    g.gain.setValueAtTime(Math.max(0.0001,a), t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002,b), t0+tA);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+tA+tR);
+  }
+  function blip(freq=520, dur=0.06, type='square', gain=0.05){
+    const ctx = ensureAudio();
+    if (ctx.state === 'suspended') return; // will work after unlock
+    const t0 = ctx.currentTime;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002,gain), t0+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.02);
+  }
+  function chord(freqs, dur=0.20, type='sine', gain=0.02){
+    const ctx = ensureAudio();
+    if (ctx.state === 'suspended') return;
+    const t0 = ctx.currentTime;
+    const sum = ctx.createGain();
+    sum.gain.setValueAtTime(1, t0);
+    sum.connect(ctx.destination);
+    freqs.forEach((f)=>{
+      const o=ctx.createOscillator(); o.type=type;
+      const g=ctx.createGain();
+      o.frequency.setValueAtTime(f, t0);
+      envGain(g, t0, 0.0001, gain, 0.01, dur);
+      o.connect(g); g.connect(sum);
+      o.start(t0); o.stop(t0+dur+0.05);
+    });
+  }
+  function clickyTyping(){
+    const ctx = ensureAudio();
+    if (ctx.state === 'suspended') return;
+    const t0 = ctx.currentTime;
+    const bufSize = Math.floor(ctx.sampleRate * 0.03);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i=0;i<bufSize;i++) data[i]=(Math.random()*2-1)*(1-i/bufSize);
+    const src = ctx.createBufferSource(); src.buffer=buf;
+    const hp = ctx.createBiquadFilter(); hp.type='highpass'; hp.frequency.setValueAtTime(1400, t0);
+    const g = ctx.createGain(); envGain(g, t0, 0.0001, 0.03, 0.005, 0.02);
+    src.connect(hp); hp.connect(g); g.connect(ctx.destination);
+    src.start(t0); src.stop(t0+0.06);
+    blip(980,0.03,'square',0.015);
+  }
+  function mechClank(){
+    blip(160,0.06,'square',0.03);
+    setTimeout(()=>blip(220,0.05,'triangle',0.02), 35);
+    setTimeout(()=>blip(1200,0.02,'square',0.01), 20);
+  }
+  function cheers(){
+    chord([523.25,659.25,783.99],0.16,'sine',0.012);
+    setTimeout(()=>blip(1400,0.03,'triangle',0.01), 60);
+  }
+  function metroDing(){
+    blip(880,0.05,'sine',0.03);
+    setTimeout(()=>blip(1175,0.06,'sine',0.02), 70);
+    setTimeout(()=>blip(660,0.08,'triangle',0.018), 160);
+  }
+  function bedroomHush(){ blip(220,0.10,'sine',0.006); }
+  function travelChime(){ chord([659.25,880.00,1174.66],0.22,'sine',0.010); }
+  function errorBeep(){
+    blip(180, 0.08, 'square', 0.06);
+    setTimeout(()=>blip(140, 0.10, 'square', 0.05), 90);
+  }
+  function confirmBeep(){
+    blip(760, 0.05, 'square', 0.05);
+    setTimeout(()=>blip(980, 0.05, 'square', 0.04), 60);
+  }
+
+  function stopLiveLoop(){
+    if (liveLoop){ clearInterval(liveLoop); liveLoop=null; }
+  }
+  function startLiveLoop(){
+    stopLiveLoop();
+    let step=0;
+    liveLoop = setInterval(()=>{
+      if (!state.started || state.scene!==SC.B || state.skinB%2!==0) return;
+      const scale = [0,3,5,7,10,12];
+      const root = 220;
+      const note = root * Math.pow(2, (scale[step%scale.length])/12);
+      chord([note, note*2, note*1.5], 0.12, 'sawtooth', 0.006);
+      step++;
+    }, 240);
+  }
+
+  function stopGlobalDrone(){
+    if (!audioCtx) return;
+    const ctx=audioCtx;
+    const t0=ctx.currentTime;
+    try{
+      if (globalDrone){
+        globalDrone.g1.gain.exponentialRampToValueAtTime(0.0001,t0+0.2);
+        globalDrone.g2.gain.exponentialRampToValueAtTime(0.0001,t0+0.2);
+        setTimeout(()=>{ try{globalDrone.o1.stop();globalDrone.o2.stop();}catch(_){}
+          globalDrone=null; },260);
+      }
+      if (globalNoise){
+        globalNoise.ng.gain.exponentialRampToValueAtTime(0.0001,t0+0.25);
+        setTimeout(()=>{ try{globalNoise.n.stop();}catch(_){}
+          globalNoise=null; },300);
+      }
+    }catch(_){}
+  }
+  function startGlobalDrone(){
+    const ctx = ensureAudio();
+    if (ctx.state === 'suspended') return;
+    stopGlobalDrone();
+    const t0 = ctx.currentTime;
+
+    const o1 = ctx.createOscillator(), g1 = ctx.createGain();
+    o1.type='sawtooth'; o1.frequency.setValueAtTime(48, t0);
+    g1.gain.setValueAtTime(0.0001,t0); g1.gain.exponentialRampToValueAtTime(0.06, t0+2.2);
+
+    const o2 = ctx.createOscillator(), g2 = ctx.createGain();
+    o2.type='square'; o2.frequency.setValueAtTime(96, t0);
+    g2.gain.setValueAtTime(0.0001,t0); g2.gain.exponentialRampToValueAtTime(0.022, t0+2.4);
+
+    const bufSize = 2*ctx.sampleRate;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i=0;i<bufSize;i++) data[i]=(Math.random()*2-1)*0.6;
+    const n = ctx.createBufferSource(); n.buffer=buf; n.loop=true;
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001,t0); ng.gain.exponentialRampToValueAtTime(0.014, t0+3.2);
+
+    const lp = ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.setValueAtTime(280, t0);
+    const sum = ctx.createGain();
+    o1.connect(g1); o2.connect(g2); n.connect(ng);
+    g1.connect(sum); g2.connect(sum); ng.connect(sum);
+    sum.connect(lp); lp.connect(ctx.destination);
+
+    o1.start(); o2.start(); n.start();
+    globalDrone = {o1,o2,g1,g2};
+    globalNoise = {n,ng};
+  }
+
+  // ---------- GAME STATE ----------
+  const SC = { BOOT:'BOOT', A:'A', B:'B', C:'C', D:'D', END:'END' };
+  const textures = {
+    office:  {name:'OFFICE',  a:'#dfe7ff', b:'#8aa3ff', c:'#0b1b3a'},
+    bedroom: {name:'BEDROOM', a:'#ffe6f8', b:'#ff8ccf', c:'#2a0b1e'},
+    gym:     {name:'GYM',     a:'#e6fff4', b:'#6cffc9', c:'#08231a'},
+    friends: {name:'FRIENDS', a:'#fff0db', b:'#ffb86c', c:'#2a1608'},
+    metro:   {name:'METRO',   a:'#e6f7ff', b:'#55c9ff', c:'#081c2a'},
+    live:    {name:'LIVEHOUSE', a:'#ffe9d6', b:'#ff6b3a', c:'#2a1208'},
+    travel:  {name:'TRAVEL',    a:'#efffe8', b:'#8cff9f', c:'#0c2414'},
+  };
+
+  const state = {
+    scene: SC.BOOT,
+    started:false,
+    jumpCount:0,
+    endT:0,
+    gx:4, gy:6, gstep:0,
+    skinA:0, skinB:0,
+    uni:0,
+    towerMode:0,
+    choiceEnabled:false,
+    choicePrompt:null,
+    choiceOptions:[],
+    resistance:0,
+    accel:false,
+    autoJumpTimer:0,
+    exitSeen:false,
+    escapeHoldMs:0,
+    escapeTargetMs:1500,
+  };
+
+  function setCaption(t){ capEl.textContent = t; }
+  function setMetric(){
+    const j = state.jumpCount;
+    let label='';
+    if (state.scene===SC.A){
+      label = `EFF ${String(Math.min(99,10+j)).padStart(2,'0')}% | PROG ${j}`;
+    } else if (state.scene===SC.B){
+      label = `CONSUME ${Math.min(999,20+j*3)} | SWITCH OK`;
+    } else if (state.scene===SC.C){
+      const p = Math.min(9999, 300 + j*41);
+      const esc = Math.min(100, Math.floor((state.escapeHoldMs/state.escapeTargetMs)*100));
+      label = `KPI ${p} | ESC ${String(esc).padStart(3,' ')}%`;
+    } else if (state.scene===SC.D){
+      const esc = Math.min(100, Math.floor((state.escapeHoldMs/state.escapeTargetMs)*100));
+      label = `EXIT VECTOR | HOLD A/D | ESC ${String(esc).padStart(3,' ')}%`;
+    } else if (state.scene===SC.END){
+      label = `PROCESS MUST CONTINUE | EXIT: DENIED`;
+    } else label = `INIT…`;
+    metricEl.textContent = label;
+  }
+
+  function currentSkin(){
+    if (state.scene === SC.A) return [textures.office, textures.bedroom, textures.gym, textures.friends, textures.metro][state.skinA % 5];
+    if (state.scene === SC.B) return [textures.live, textures.travel][state.skinB % 2];
+    return textures.office;
+  }
+
+  function hexToRgb(h){
+    const m = h.replace('#','');
+    const n = parseInt(m, 16);
+    return {r:(n>>16)&255, g:(n>>8)&255, b:n&255};
+  }
+  function mix(a,b,t){
+    const A=hexToRgb(a), B=hexToRgb(b);
+    const r=Math.round(A.r+(B.r-A.r)*t);
+    const g=Math.round(A.g+(B.g-A.g)*t);
+    const bb=Math.round(A.b+(B.b-A.b)*t);
+    return `rgb(${r},${g},${bb})`;
+  }
+  function tilePalette(){
+    const sk = currentSkin();
+    if (state.scene === SC.C || state.scene === SC.D || state.scene === SC.END){
+      const t = Math.min(1, Math.max(0, state.uni));
+      const c1 = mix(sk.a, '#9fb6c7', t);
+      const c2 = mix(sk.b, '#2fe0d6', t*0.55);
+      const c3 = mix(sk.c, '#061018', t);
+      return {c1,c2,c3};
+    }
+    return {c1:sk.a, c2:sk.b, c3:sk.c};
+  }
+
+  
+  function drawGirl(ctx, x, y, s){
+    // Pixel portrait (female) inspired by the provided reference:
+    // dark hair with teal + purple streaks, no glasses, separated eye whites,
+    // silver earrings + chain necklace, black top with both sleeves.
+    const px = (xx,yy,w,h,c) => { ctx.fillStyle=c; ctx.fillRect(x+xx*s, y+yy*s, w*s, h*s); };
+
+    const out = '#05060a';
+    const hair = '#0b0b0f', hair2 = '#171826', hairH = '#2a2f43';
+    const teal = '#2aa7a2', teal2 = '#1a6f74';
+    const purple = '#5a4aa8', purple2 = '#3c2f7a';
+    const whiteHL = '#cfd7ff';
+    const skin = '#f3c9ce', skin2 = '#eeb5be', blush = '#ea879a';
+    const lip = '#c45262';
+    const brow = '#131a24';
+    const eyeW = '#f4fbff', eyeD = '#101428', eyeHL = '#ffffff';
+    const shirt = '#0c0e14', shirt2 = '#151722';
+    const silver = '#c9d3df', silverH = '#f3f7ff';
+
+    // subtle frame shadow like the original
+    ctx.globalAlpha = 0.75;
+    px(9, 6, 46, 40, out);
+    px(17, 17, 30, 30, out);
+    ctx.globalAlpha = 1;
+
+    // hair cap + bangs
+    px(10, 6, 44, 38, hair);
+    px(12, 8, 40, 34, hair2);
+    px(14, 10, 36, 8, hairH);
+
+    // side hair volume
+    px(8, 14, 12, 44, hair);
+    px(10, 16, 10, 42, hair2);
+    px(44, 14, 12, 44, hair);
+    px(46, 16, 10, 42, hair2);
+
+    // back hair
+    px(16, 40, 32, 24, hair);
+    px(18, 42, 28, 20, hair2);
+    px(18, 40, 28, 2, hairH);
+
+    // highlights / streaks (left purple, right teal)
+    px(12, 12, 6, 20, purple);
+    px(13, 14, 4, 18, purple2);
+
+    px(46, 18, 6, 34, teal);
+    px(47, 20, 4, 30, teal2);
+
+    // small white strand highlight on right edge
+    px(52, 16, 2, 10, whiteHL);
+
+    // face (slightly egg-shaped by trimming corners)
+    px(18, 18, 28, 28, skin);
+    px(20, 20, 24, 24, skin2);
+    // soften top corners to feel less boxy
+    px(18, 18, 2, 2, hair2);
+    px(44, 18, 2, 2, hair2);
+
+    // brows: two separate curved brows
+    px(22, 24, 7, 1, brow);
+    px(23, 25, 5, 1, brow);
+    px(24, 26, 3, 1, brow);
+
+    px(35, 24, 7, 1, brow);
+    px(36, 25, 5, 1, brow);
+    px(37, 26, 3, 1, brow);
+
+    // blush
+    px(22, 34, 7, 2, blush);
+    px(39, 34, 7, 2, blush);
+
+    // eyes (whites separated; no connecting bar)
+    // left eye
+    px(21, 29, 11, 6, eyeW);
+    px(21, 28, 11, 1, '#07070a');
+    px(24, 30, 5, 4, eyeD);
+    px(29, 29, 1, 1, eyeHL);
+
+    // right eye
+    px(34, 29, 11, 6, eyeW);
+    px(34, 28, 11, 1, '#07070a');
+    px(37, 30, 5, 4, eyeD);
+    px(42, 29, 1, 1, eyeHL);
+
+    // nose
+    px(31, 34, 2, 3, '#d3a0a9');
+
+    // mouth
+    px(28, 41, 8, 1, lip);
+
+    // neck
+    px(28, 44, 8, 6, skin2);
+
+    // earrings (silver drops)
+    px(18, 30, 2, 2, silverH);
+    px(18, 32, 2, 3, silver);
+    px(19, 35, 1, 2, silver);
+
+    px(46, 30, 2, 2, silverH);
+    px(46, 32, 2, 3, silver);
+    px(47, 35, 1, 2, silver);
+
+    // necklace chain + heart-ish pendant
+    px(19, 52, 26, 1, silver);
+    px(21, 53, 22, 1, silverH);
+    px(30, 54, 4, 2, silverH);
+    px(29, 56, 6, 2, silver);
+    px(30, 58, 4, 2, silverH);
+
+    // shirt / shoulders
+    px(12, 54, 40, 8, shirt);
+    px(16, 56, 32, 12, shirt2);
+
+    // sleeves (both sides restored)
+    px(12, 60, 7, 2, shirt2);   // left sleeve top
+    px(14, 62, 3, 4, shirt);    // left sleeve body
+    px(45, 60, 7, 2, shirt2);   // right sleeve top
+    px(47, 62, 3, 4, shirt);    // right sleeve body
+
+    // simple chest highlight (keeps original vibe)
+    ctx.globalAlpha = 0.10;
+    px(16,16,32,30,'#ffffff');
+    ctx.globalAlpha = 1;
+  }
+
+
+  function jumpSfx(){
+    if (!audioUnlocked) return;
+    if (state.scene===SC.A){
+      const idx = state.skinA % 5;
+      if (idx===0) clickyTyping();
+      else if (idx===1) bedroomHush();
+      else if (idx===2) mechClank();
+      else if (idx===3) cheers();
+      else if (idx===4) metroDing();
+      return;
+    }
+    if (state.scene===SC.B){
+      if (state.skinB%2===0) chord([196,246.94,293.66],0.18,'sawtooth',0.010);
+      else travelChime();
+      return;
+    }
+    if (state.scene===SC.C) blip(660,0.04,'square',0.035);
+    else if (state.scene===SC.D || state.scene===SC.END) blip(220,0.03,'square',0.02);
+    else blip(520,0.05,'square',0.04);
+  }
+
+  function updateSceneText(){
+    if (state.scene===SC.A){
+      const k = state.skinA%5;
+      const lines=[
+        "Office: keys clatter. Each jump adds one more metric.",
+        "Bedroom: quiet like a buffer. You sleep; progress doesn't.",
+        "Gym: mechanical rhythm. Repetition = measurable.",
+        "Friends: loud cheers. Still counted as consumption.",
+        "Metro: next stop—Binjiang. The route still loops."
+      ];
+      setCaption(lines[k]);
+    } else if (state.scene===SC.B){
+      setCaption(state.skinB%2===0
+        ? "Livehouse: the music is pretty. The grid didn't change."
+        : "Travel: flowers and grass cover the grid. A prettier address. A softer system."
+      );
+    } else if (state.scene===SC.C){
+      setCaption("Jump upward: KPI / PERFORMANCE / OPTIMIZE. Colors unify. Words unify.");
+    } else if (state.scene===SC.D){
+      setCaption("Rule: in Scene C/D, hold A or D (or hold the left/right edge 1.5s) to attempt escape.");
+    } else if (state.scene===SC.END){
+      setCaption("THE SYSTEM REPLICATES UPWARD.");
+    } else setCaption("…");
+    setMetric();
+  }
+
+  function refreshChoiceUI(){
+    // FIX: scene B always switchable
+    if (state.scene === SC.B){
+      btnChoice.classList.remove('disabled');
+      state.choiceEnabled = true;
+    } else if (!state.choiceEnabled){
+      btnChoice.classList.add('disabled');
+    }
+  }
+
+  function maybeEnableChoice(){
+    if (state.scene===SC.A && state.jumpCount>=12 && !state.choiceEnabled){
+      state.choiceEnabled=true;
+      btnChoice.classList.remove('disabled');
+      state.choicePrompt="A BREAKOUT?";
+      state.choiceOptions=[
+        {id:'LIVE', text:'GO LIVEHOUSE (MUSIC)', action:'B', skin:0},
+        {id:'TRAVEL', text:'GO TRAVEL (FLOWERS/GRASS)', action:'B', skin:1},
+        {id:'UP', text:'TAKE THE ASCENT CHANNEL', action:'C'}
+      ];
+      sys('SYS>','CHOICE AVAILABLE: BREAKOUT / ASCEND');
+    }
+    if (state.scene===SC.B){
+      state.choiceEnabled=true;
+      btnChoice.classList.remove('disabled');
+      state.choicePrompt="SWITCH (YOU'RE STILL IN THE GRID)";
+      state.choiceOptions=[
+        {id:'B_LIVE', text:'SWITCH TO LIVEHOUSE (MUSIC)', action:'B', skin:0},
+        {id:'B_TRAVEL', text:'SWITCH TO TRAVEL (FLOWERS/GRASS)', action:'B', skin:1},
+        {id:'UP', text:'ASCEND (KPI)', action:'C'}
+      ];
+    }
+    if (state.scene===SC.C && state.jumpCount>=62 && !state.exitSeen){
+      state.exitSeen=true;
+      state.choiceEnabled=true;
+      btnChoice.classList.remove('disabled');
+      state.choicePrompt="EXIT THE PROCESS?";
+      state.choiceOptions=[
+        {id:'EXIT', text:'EXIT / LEAVE THE BUILDING', action:'D'},
+        {id:'CLOSE', text:'CLOSE WINDOW', action:'D'}
+      ];
+      sys('SYS>','EXIT SURFACE RENDERED');
+    }
+    refreshChoiceUI();
+  }
+
+  function showChoiceModal(){
+    if (!state.choiceEnabled || !state.choiceOptions.length) return;
+    if (audioUnlocked) confirmBeep();
+    modal.classList.add('on');
+
+    const optsHtml = state.choiceOptions.map((o,i)=>`
+      <button class="btn ${i===0?'danger':''}" data-choice="${o.id}" style="width:100%; margin-top:8px; height:42px;">
+        ${o.text}
+      </button>`).join('');
+
+    modalBody.innerHTML = `
+      <div style="font-weight:700; letter-spacing:.4px;">${state.choicePrompt}</div>
+      <div style="margin-top:8px; color:rgba(214,231,255,.85);">
+        Scene B can switch Live/Travel anytime. Switching is still a commit.
+      </div>
+      <div style="margin-top:6px;">${optsHtml}</div>
+      <div class="hint">SYS&gt; Switching is allowed. Returning to “before process” is not.</div>
+    `;
+
+    modalBody.querySelectorAll('[data-choice]').forEach(btn=>{
+      btn.addEventListener('click', ()=> pickChoice(btn.getAttribute('data-choice')), {once:true});
+    });
+  }
+
+  function pickChoice(id){
+    const opt = state.choiceOptions.find(o=>o.id===id) || state.choiceOptions[0];
+    modal.classList.remove('on');
+    sys('SYS>', `CHOICE COMMITTED: ${opt.id}`);
+    if (audioUnlocked) confirmBeep();
+
+    if (opt.action==='B'){
+      if (state.scene !== SC.B) sys('SYS>','MAP: BREAKOUT LOADED');
+      state.scene=SC.B;
+      state.skinB = (opt.skin ?? state.skinB) % 2;
+      sys('SYS>', `MAP SKIN LOADED: ${state.skinB===0?'LIVEHOUSE':'TRAVEL'}`);
+      if (state.skinB===0) startLiveLoop(); else stopLiveLoop();
+    } else if (opt.action==='C'){
+      state.scene=SC.C;
+      stopLiveLoop();
+      sys('SYS>','ASCENT CHANNEL: ENABLED','bad');
+      startGlobalDrone();
+      startAccel(); // 点击 KPI 后自动上发条
+    } else if (opt.action==='D'){
+      stopLiveLoop();
+      state.scene=SC.D;
+      state.towerMode=0;
+      sys('SYS>','EXIT ATTEMPT ROUTED','bad');
+      sys('SYS>','ACCESS DENIED / CANNOT EXIT PROCESS','bad');
+      startGlobalDrone();
+    }
+    updateSceneText();
+    maybeEnableChoice();
+  }
+
+  function denyClose(){
+    state.resistance++;
+    winEl.classList.remove('shake','flash'); void winEl.offsetWidth;
+    winEl.classList.add('shake','flash');
+    if (audioUnlocked) errorBeep();
+
+    sys('SYS>','CLOSE REQUEST RECEIVED');
+    sys('SYS>','PERMISSION: DENIED','bad');
+    sys('SYS>','PROCESS MUST CONTINUE','bad');
+
+    if (state.resistance>=3){
+      sys('SYS>','USER RESISTANCE LOGGED','bad');
+      sys('SYS>','ADAPTIVE CONSTRAINTS ENABLED','bad');
+    }
+    if (state.scene!==SC.BOOT){
+      setCaption(state.resistance<3
+        ? "ACCESS DENIED / CANNOT EXIT PROCESS"
+        : "RESISTANCE LOGGED. CONSTRAINTS ADAPT."
+      );
+    }
+  }
+  closeBtn.addEventListener('click', (e)=>{ e.preventDefault(); denyClose(); });
+
+  btnInit.addEventListener('click', async ()=>{
+    await unlockAudio();
+    if (audioUnlocked) confirmBeep();
+
+    modal.classList.remove('on');
+    state.started=true;
+    state.scene=SC.A;
+
+    sys('SYS>','INIT SEQUENCE ACCEPTED');
+    sys('SYS>','A LOOP: OFFICE/BEDROOM/GYM/FRIENDS/METRO');
+    sys('SYS>','INPUT: TAP=JUMP  HOLD(RIGHT)=ASCEND  CHOICE=SWITCH  C/D: HOLD A/D=ESCAPE VECTOR');
+    updateSceneText();
+    maybeEnableChoice();
+  });
+
+  // ---------- GRID MOTION ----------
+  function nextGridStep(upBias=0){
+    const dir = (state.gstep % 2 === 0) ? -1 : 1;
+    let nx = state.gx + dir;
+    let ny = state.gy - 1 - upBias;
+    nx = Math.max(0, Math.min(8, nx));
+    if (ny < 0) ny = 8;
+    state.gx=nx; state.gy=ny; state.gstep++;
+  }
+
+  function jump(){
+    if (!state.started) return;
+    if (!audioUnlocked) unlockAudio(); // attempt unlock on first interaction
+
+    jumpSfx();
+    state.jumpCount++;
+
+    if (state.scene===SC.A){
+      const n = state.jumpCount;
+      if (n%6===0 || n%9===0){
+        state.skinA++;
+        const nm = ['OFFICE','BEDROOM','GYM','FRIENDS','METRO'][state.skinA%5];
+        sys('SYS>', `SKIN ROTATE: ${nm}`);
+        updateSceneText();
+      }
+    }
+
+    if (state.scene===SC.C){
+      state.uni = Math.min(1, state.uni + 0.018);
+      if (state.jumpCount % 6 === 0){
+        const msg = ["KPI +1","PERFORMANCE LOGGED","OPTIMIZE LOOP","RANK UPDATED","SYNC COMPLETE"][state.jumpCount%5];
+        sys('SYS>', msg, 'bad');
+      }
+    }
+
+    if (state.scene===SC.D){
+      state.towerMode = Math.min(1, state.towerMode + 0.07);
+      state.uni = Math.min(1, state.uni + 0.012);
+      if (state.towerMode > 0.88 && state.scene !== SC.END){
+        state.scene = SC.END;
+        state.endT = performance.now()/1000;
+        sys('SYS>','TOWER FIELD: COMMITTED','bad');
+        sys('SYS>','ENVIRONMENTS = SKINS','bad');
+        sys('SYS>','JUMP = LAYING BRICKS','bad');
+        updateSceneText();
+        startGlobalDrone();
+      }
+    }
+
+    const upBias = (state.scene===SC.C) ? 1 : (state.accel ? 1 : 0);
+    nextGridStep(upBias);
+
+    maybeEnableChoice();
+    setMetric();
+  }
+
+  function observe(){
+    if (!state.started) return;
+    if (!audioUnlocked) unlockAudio();
+    sys('SYS>','OBSERVE: USER PAUSED','bad');
+    sys('SYS>','PAUSE STILL COUNTS AS DATA','bad');
+    state.jumpCount++;
+    state.uni = Math.min(1, state.uni + (state.scene===SC.C ? 0.012 : 0.006));
+    if (audioUnlocked) blip(420,0.06,'triangle',0.03);
+    setCaption("Even stopping contributes data.");
+    setMetric();
+    maybeEnableChoice();
+  }
+
+  // ---------- TOWER ----------
+  function drawTower(ctx, alpha=1, asBackdrop=false){
+    const t = performance.now()/1000;
+    const cold = (state.scene===SC.C||state.scene===SC.D||state.scene===SC.END);
+    const a = Math.min(1, Math.max(0, alpha));
+
+    const centerX = Math.floor(W*0.52);
+    const baseY = Math.floor(H*0.92);
+    const tw = Math.floor(W * (asBackdrop ? 0.26 : 0.38));
+    const th = Math.floor(H * (asBackdrop ? 0.78 : 0.86));
+
+    const grow = Math.min(1, state.jumpCount / 90);
+    const hNow = Math.floor(th * (0.20 + 0.78*grow));
+    const topY = baseY - hNow;
+
+    const wall = cold ? mix('#10141b', '#0a1016', state.uni) : '#10141b';
+    const edge = cold ? mix('rgba(108,240,255,0.35)', 'rgba(80,210,220,0.25)', state.uni) : 'rgba(108,240,255,0.35)';
+
+    ctx.save();
+    ctx.globalAlpha = a;
+
+    const x0 = centerX - Math.floor(tw/2);
+    if (asBackdrop){
+      ctx.fillStyle = wall;
+      ctx.fillRect(x0, topY, tw, hNow);
+    }
+
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = Math.max(1, Math.floor(2*dpr));
+    ctx.strokeRect(x0+0.5, topY+0.5, tw-1, hNow-1);
+
+    const cols = 5;
+    const rows = Math.max(6, Math.floor(hNow / Math.max(24*dpr, 1)));
+    const pad = Math.floor(10*dpr);
+    const cellW = Math.floor((tw - pad*2)/cols);
+    const cellH = Math.floor((hNow - pad*2)/rows);
+
+    const slogans = ["KPI","WORK","OBEY","NULL","996","OPTIMIZE","RANK","PERF","SYNC","CONSUME"];
+    const scroll = Math.floor((t*22 + state.jumpCount*3) % (rows*cellH));
+
+    for (let r=0;r<rows;r++){
+      for (let c=0;c<cols;c++){
+        const rx = x0 + pad + c*cellW;
+        const ry = topY + pad + r*cellH;
+        const k = (r*cols+c+state.jumpCount) % 9;
+        const on = k < 6;
+        const wcol = on ? (cold ? 'rgba(46,224,214,0.38)' : 'rgba(108,240,255,0.32)') : 'rgba(255,75,216,0.10)';
+
+        // 只在塔楼两侧画窗格+文字，中间留空
+        if (c===0 || c===cols-1){
+          ctx.fillStyle = wcol;
+          ctx.fillRect(rx+2, ry+2, cellW-4, cellH-4);
+
+          if (!asBackdrop){
+            ctx.save();
+            ctx.globalAlpha *= (0.60 + 0.35*grow);
+            ctx.fillStyle = cold ? 'rgba(180,240,255,0.86)' : 'rgba(255,214,243,0.78)';
+            ctx.font = `${Math.floor(10*dpr)}px ui-monospace, monospace`;
+            const label = slogans[(r + c + Math.floor((scroll/18))) % slogans.length];
+            ctx.fillText(label, rx+5, ry+Math.floor(cellH/2));
+            ctx.restore();
+          }
+        }
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // ---------- GRID RENDER ----------
+  function drawIconPattern(ctx, rx, ry, tile, kind){
+    const iw = Math.max(1, Math.floor(tile/6));
+    ctx.globalAlpha = 0.22;
+
+    if (kind==='office'){
+      ctx.fillRect(rx+iw*1, ry+iw*2, iw*4, iw);
+      ctx.fillRect(rx+iw*1, ry+iw*4, iw*3, iw);
+      ctx.fillRect(rx+iw*4, ry+iw*1, iw, iw*4);
+    } else if (kind==='bedroom'){
+      ctx.fillRect(rx+iw*1, ry+iw*2, iw*4, iw*3);
+      ctx.clearRect(rx+iw*3, ry+iw*2, iw, iw*3);
+      ctx.fillRect(rx+iw*2, ry+iw*5, iw*2, iw);
+    } else if (kind==='gym'){
+      ctx.fillRect(rx+iw*1, ry+iw*3, iw*4, iw);
+      ctx.fillRect(rx+iw*2, ry+iw*2, iw, iw*3);
+      ctx.fillRect(rx+iw*4, ry+iw*2, iw, iw*3);
+    } else if (kind==='friends'){
+      ctx.fillRect(rx+iw*2, ry+iw*2, iw, iw*2);
+      ctx.fillRect(rx+iw*3, ry+iw*2, iw, iw*2);
+      ctx.fillRect(rx+iw*2, ry+iw*4, iw*2, iw);
+      ctx.fillRect(rx+iw*1, ry+iw*1, iw, iw);
+      ctx.fillRect(rx+iw*4, ry+iw*1, iw, iw);
+    } else if (kind==='metro'){
+      ctx.fillRect(rx+iw*1, ry+iw*2, iw*4, iw);
+      ctx.fillRect(rx+iw*2, ry+iw*3, iw*2, iw*2);
+      ctx.fillRect(rx+iw*1, ry+iw*5, iw*4, iw);
+    } else if (kind==='live'){
+      ctx.fillRect(rx+iw*1, ry+iw*2, iw*4, iw*2);
+      ctx.clearRect(rx+iw*2, ry+iw*3, iw*2, iw);
+    } else if (kind==='travel'){
+      ctx.fillRect(rx+iw*3, ry+iw*3, iw, iw*3);
+      ctx.fillRect(rx+iw*2, ry+iw*2, iw, iw);
+      ctx.fillRect(rx+iw*4, ry+iw*2, iw, iw);
+      ctx.fillRect(rx+iw*3, ry+iw*1, iw, iw);
+      ctx.fillRect(rx+iw*3, ry+iw*2, iw, iw);
+      ctx.fillRect(rx+iw*1, ry+iw*5, iw, iw);
+      ctx.fillRect(rx+iw*5, ry+iw*5, iw, iw);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawGrid(ctx){
+    const pad = Math.floor(18*dpr);
+    const top = Math.floor(52*dpr);
+    const bw = W - pad*2;
+    const bh = H - top - Math.floor(16*dpr);
+
+    const cols = 9, rows = 9;
+    const tile = Math.floor(Math.min(bw/cols, bh/rows));
+    const ox = Math.floor((W - tile*cols)/2);
+    const oy = Math.floor(top + (bh - tile*rows)/2);
+
+    const pal = tilePalette();
+    ctx.fillStyle = '#05060a';
+    ctx.fillRect(0,0,W,H);
+
+    if (state.scene===SC.C || state.scene===SC.D){
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.35, 0.10 + state.uni*0.35);
+      drawTower(ctx, 0.35, true);
+      ctx.restore();
+    }
+
+    const kind = (()=>{
+      if (state.scene===SC.A) return ['office','bedroom','gym','friends','metro'][state.skinA%5];
+      if (state.scene===SC.B) return (state.skinB%2===0) ? 'live' : 'travel';
+      return 'office';
+    })();
+
+    for (let y=0;y<rows;y++){
+      for (let x=0;x<cols;x++){
+        const rx = ox + x*tile;
+        const ry = oy + y*tile;
+        const even = (x+y)%2===0;
+
+        const baseC = even ? pal.c3 : mix(pal.c3, '#0b1a2a', 0.22);
+        ctx.fillStyle = baseC;
+        ctx.fillRect(rx,ry,tile,tile);
+
+        ctx.fillStyle = even ? pal.c2 : pal.c1;
+        drawIconPattern(ctx, rx, ry, tile, kind);
+
+        ctx.strokeStyle = (kind==='travel')
+          ? 'rgba(140,255,159,0.14)'
+          : 'rgba(108,240,255,0.10)';
+        ctx.strokeRect(rx+0.5, ry+0.5, tile-1, tile-1);
+      }
+    }
+
+    const cx = ox + state.gx*tile;
+    const cy = oy + state.gy*tile;
+    ctx.save();
+    ctx.strokeStyle = (kind==='travel')
+      ? 'rgba(140,255,159,0.75)'
+      : 'rgba(108,240,255,0.65)';
+    ctx.lineWidth = Math.max(1, Math.floor(2*dpr));
+    ctx.strokeRect(cx+1, cy+1, tile-2, tile-2);
+    ctx.restore();
+
+    const spr=64;
+    const s = Math.max(1, Math.floor((tile/3) / 2));
+    const pxX = Math.floor(cx + tile/2 - (spr*s)/2);
+    const pxY = Math.floor(cy - (spr*s)*0.78);
+    drawGirl(ctx, pxX, pxY, s);
+
+    if (state.scene===SC.B){
+      ctx.save();
+      ctx.globalAlpha = 0.90;
+      const uiW = Math.floor(W*0.40);
+      const uiH = Math.floor(H*0.30);
+      const ux = Math.floor(W - uiW - 14*dpr);
+      const uy = Math.floor(64*dpr);
+      ctx.fillStyle = 'rgba(8,12,18,0.80)';
+      ctx.fillRect(ux,uy,uiW,uiH);
+      ctx.strokeStyle = (state.skinB%2===0) ? 'rgba(255,75,216,0.22)' : 'rgba(140,255,159,0.22)';
+      ctx.strokeRect(ux+0.5,uy+0.5,uiW-1,uiH-1);
+
+      ctx.font = `${Math.floor(12*dpr)}px ui-monospace, monospace`;
+      if (state.skinB%2===0){
+        ctx.fillStyle = 'rgba(255,214,243,0.92)';
+        const lines = ["ticket: ✅","drink: ✅","merch: …","bass: ████","music: PRETTY"];
+        for (let i=0;i<lines.length;i++) ctx.fillText(lines[i], ux+10*dpr, uy+22*dpr+i*18*dpr);
+      } else {
+        ctx.fillStyle = 'rgba(220,255,228,0.92)';
+        const lines = ["destination: BINJIANG","address: Riverside Promenade","weather: soft","grid: flowers/grass","data: UPLOADING"];
+        for (let i=0;i<lines.length;i++) ctx.fillText(lines[i], ux+10*dpr, uy+22*dpr+i*18*dpr);
+      }
+      ctx.restore();
+    }
+
+    if (state.scene===SC.D){
+      ctx.save();
+      const a = Math.min(1, Math.max(0, state.towerMode));
+      ctx.globalAlpha = a;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0,0,W,H);
+      ctx.restore();
+    }
+  }
+
+  function drawEndScene(ctx, t){
+    ctx.fillStyle='#04060a';
+    ctx.fillRect(0,0,W,H);
+
+    const time = t/1000;
+    const endTime = (state.endT || time);
+    const since = Math.max(0, time - endTime);
+
+    // growth: 跳得越多 + 结局越久，楼越高、越“繁殖”
+    const g = Math.min(1, 0.20 + state.jumpCount/140 + since*0.06);
+    const spawn = Math.min(1, since*0.12);
+
+    // 远处雾层 / 霓虹天光
+    ctx.save();
+    const skyA = 0.22 + 0.25*(1-g);
+    const grd = ctx.createLinearGradient(0,0,0,H);
+    grd.addColorStop(0, `rgba(108,240,255,${0.06+0.10*skyA})`);
+    grd.addColorStop(0.35, `rgba(255,75,216,${0.03+0.06*skyA})`);
+    grd.addColorStop(1, `rgba(0,0,0,0)`);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+
+    // deterministic hash for stable buildings
+    const hash = (n)=>{
+      n = (n<<13) ^ n;
+      return 1.0 - ((n*(n*n*15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0;
+    };
+    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+    // pseudo-3D building draw (front + side + top)
+    function drawBuilding(xc, bottom, w, h, depth, idx){
+      const x0 = Math.floor(xc - w/2);
+      const y0 = Math.floor(bottom - h);
+      const dx = Math.floor(w*0.34);
+      const dy = Math.floor(-w*0.16);
+
+      // colors (cyber)
+      const body = `rgba(7,16,24,${0.92 - depth*0.25})`;
+      const front = `rgba(9,22,32,${0.95 - depth*0.30})`;
+      const side = `rgba(5,12,18,${0.95 - depth*0.28})`;
+
+      // front face
+      ctx.fillStyle = front;
+      ctx.fillRect(x0, y0, w, h);
+
+      // side face (right)
+      ctx.fillStyle = side;
+      ctx.beginPath();
+      ctx.moveTo(x0+w, y0);
+      ctx.lineTo(x0+w+dx, y0+dy);
+      ctx.lineTo(x0+w+dx, y0+dy+h);
+      ctx.lineTo(x0+w, y0+h);
+      ctx.closePath();
+      ctx.fill();
+
+      // top face
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x0+dx, y0+dy);
+      ctx.lineTo(x0+w+dx, y0+dy);
+      ctx.lineTo(x0+w, y0);
+      ctx.closePath();
+      ctx.fill();
+
+      // outline neon edge
+      const edgeA = 0.12 + 0.20*(1-depth);
+      ctx.strokeStyle = `rgba(108,240,255,${edgeA})`;
+      ctx.lineWidth = Math.max(1, Math.floor(1.1*dpr));
+      ctx.strokeRect(x0, y0, w, h);
+      ctx.beginPath();
+      ctx.moveTo(x0+w, y0);
+      ctx.lineTo(x0+w+dx, y0+dy);
+      ctx.lineTo(x0+w+dx, y0+dy+h);
+      ctx.lineTo(x0+w, y0+h);
+      ctx.stroke();
+
+      // windows: small squares/blocks
+      const cols = clamp(Math.floor(w/(6*dpr)), 2, 10);
+      const rows = clamp(Math.floor(h/(10*dpr)), 6, 28);
+      const padX = Math.floor(w*0.12);
+      const padY = Math.floor(h*0.08);
+      const cellW = Math.floor((w - padX*2)/cols);
+      const cellH = Math.floor((h - padY*2)/rows);
+      const flick = (0.5+0.5*Math.sin(time*1.6 + idx*0.37));
+      for (let r=0;r<rows;r++){
+        for (let c=0;c<cols;c++){
+          const rr = hash(idx*999 + r*77 + c*31);
+          const on = rr > (0.15 + depth*0.25 - flick*0.08);
+          if (!on) continue;
+          const wx = x0 + padX + c*cellW + 1;
+          const wy = y0 + padY + r*cellH + 1;
+          const ww = Math.max(1, cellW-2);
+          const wh = Math.max(1, Math.floor(cellH*0.55));
+          // cyber colors
+          const pick = (idx + r + c) % 7;
+          let col = `rgba(46,224,214,${0.22 + 0.38*(1-depth)})`;
+          if (pick===0) col = `rgba(255,75,216,${0.14 + 0.30*(1-depth)})`;
+          if (pick===1) col = `rgba(108,240,255,${0.18 + 0.34*(1-depth)})`;
+          if (pick===2) col = `rgba(140,255,159,${0.10 + 0.22*(1-depth)})`;
+          ctx.fillStyle = col;
+          ctx.fillRect(wx, wy, ww, wh);
+        }
+      }
+
+      // slogans on some buildings
+      if (idx % 6 === 0){
+        const slogans = ["KPI","WORK","OBEY","996","RANK","SYNC","CONSUME","NULL","OPTIMIZE"];
+        const label = slogans[(idx + Math.floor(time*2)) % slogans.length];
+        ctx.fillStyle = `rgba(180,240,255,${0.35 + 0.25*(1-depth)})`;
+        ctx.font = `${Math.floor(9*dpr)}px ui-monospace, monospace`;
+        ctx.fillText(label, x0+4, y0+Math.floor(12*dpr));
+      }
+
+      // jumpers: tiny people rectangles climbing upward with the building growth
+      const peopleN = (idx % 4) + 1;
+      for (let p=0;p<peopleN;p++){
+        const phase = (hash(idx*17 + p*131)*0.5 + 0.5);
+        const speed = 0.10 + 0.12*(1-depth);
+        const prog = (since*speed + phase) % 1;
+        const py = bottom - (prog*0.92)*h;
+        const pw = Math.max(2, Math.floor(w*0.18));
+        const ph = Math.max(3, Math.floor(4*dpr));
+        const px = x0 + Math.floor(w*(0.25 + 0.5*((p+1)/(peopleN+1))));
+        ctx.fillStyle = `rgba(255,214,243,${0.38 + 0.35*(1-depth)})`;
+        ctx.fillRect(px, Math.floor(py), pw, ph);
+      }
+    }
+
+    // Dense skyline (very dense + 3D layers)
+    const layers = 3;
+    for (let layer=0; layer<layers; layer++){
+      const depth = layer/(layers-1); // 0 near, 1 far
+      const count = Math.floor((14 + layer*6) * (0.70 + 0.30*spawn)); // more over time
+      for (let i=0; i<count; i++){
+        const idx = layer*1000 + i;
+        const u = (i/(count-1) - 0.5); // -0.5..0.5
+        const jitter = (hash(idx*3)*0.5+0.5);
+        const xCenter = W*(0.5 + u*0.95 + (hash(idx*11))*0.02);
+        const baseW = (10 + (1-depth)*22) * dpr;
+        const w = Math.floor(baseW * (0.72 + 0.60*jitter));
+        const baseH = (0.22 + 0.46*(0.5+0.5*hash(idx*19))) * H;
+        const h = Math.floor(baseH * (0.28 + 0.92*g) * (0.85 + 0.25*(1-depth)));
+        const bottom = H*(0.98 - depth*0.14);
+        drawBuilding(xCenter, bottom, w, h, depth, idx);
+      }
+    }
+
+    
+    // END 仍然是格子：淡淡的棋盘覆盖在城市上
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    ctx.strokeStyle = 'rgba(108,240,255,0.18)';
+    ctx.lineWidth = 1*dpr;
+    const step = Math.floor(24*dpr);
+    for (let x=0; x<=W; x+=step){
+      ctx.beginPath();
+      ctx.moveTo(x,0);
+      ctx.lineTo(x,H);
+      ctx.stroke();
+    }
+    for (let y=0; y<=H; y+=step){
+      ctx.beginPath();
+      ctx.moveTo(0,y);
+      ctx.lineTo(W,y);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Foreground shadow to ground the city
+    ctx.save();
+    const fog = ctx.createLinearGradient(0,H*0.72,0,H);
+    fog.addColorStop(0, 'rgba(0,0,0,0)');
+    fog.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = fog;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+}
+
+  function drawEndGlow(ctx, t){
+    const time = t/1000;
+    const endTime = (state.endT || time);
+    const since = Math.max(0, time - endTime);
+    const g = Math.min(1, 0.20 + state.jumpCount/140 + since*0.06);
+    const spawn = Math.min(1, since*0.12);
+
+    const hash = (n)=>{
+      n = (n<<13) ^ n;
+      return 1.0 - ((n*(n*n*15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0;
+    };
+
+    ctx.clearRect(0,0,W,H);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    const layers = 3;
+    for (let layer=0; layer<layers; layer++){
+      const depth = layer/(layers-1);
+      const count = Math.floor((14 + layer*6) * (0.70 + 0.30*spawn));
+      for (let i=0; i<count; i++){
+        const idx = layer*1000 + i;
+        const u = (i/(count-1) - 0.5);
+        const xCenter = W*(0.5 + u*0.95 + (hash(idx*11))*0.02);
+        const jitter = (hash(idx*3)*0.5+0.5);
+        const baseW = (10 + (1-depth)*22) * dpr;
+        const w = Math.floor(baseW * (0.72 + 0.60*jitter));
+        const baseH = (0.22 + 0.46*(0.5+0.5*hash(idx*19))) * H;
+        const h = Math.floor(baseH * (0.28 + 0.92*g) * (0.85 + 0.25*(1-depth)));
+        const bottom = H*(0.98 - depth*0.14);
+        const x0 = Math.floor(xCenter - w/2);
+        const y0 = Math.floor(bottom - h);
+
+        const a = 0.14 + 0.22*(1-depth);
+        ctx.shadowBlur = Math.floor((10 + 14*(1-depth))*dpr);
+        ctx.shadowColor = 'rgba(108,240,255,0.55)';
+        ctx.strokeStyle = `rgba(108,240,255,${a})`;
+        ctx.lineWidth = Math.max(1, Math.floor(1.2*dpr));
+        ctx.strokeRect(x0, y0, w, h);
+
+        if (idx % 7 === 0){
+          ctx.shadowColor = 'rgba(255,75,216,0.55)';
+          ctx.fillStyle = `rgba(255,75,216,${0.08 + 0.16*(1-depth)})`;
+          ctx.fillRect(x0+Math.floor(w*0.18), y0+Math.floor(h*0.28), Math.floor(w*0.64), Math.max(2,Math.floor(2*dpr)));
+        }
+      }
+    }
+    ctx.restore();
+}
+
+  function drawGlow(){
+    // END/D: dedicated skyline glow
+    if (state.started && (state.scene===SC.END || state.scene===SC.D)){
+      drawEndGlow(gctx, performance.now());
+      return;
+    }
+
+    gctx.clearRect(0,0,W,H);
+    gctx.save();
+    gctx.globalCompositeOperation='lighter';
+    const cold = (state.scene===SC.C || state.scene===SC.D || state.scene===SC.END);
+
+    gctx.shadowColor = cold ? 'rgba(46,224,214,0.65)' : 'rgba(108,240,255,0.65)';
+    gctx.shadowBlur = Math.floor(14*dpr);
+    gctx.strokeStyle = cold ? 'rgba(46,224,214,0.28)' : 'rgba(108,240,255,0.22)';
+    gctx.lineWidth = Math.floor(2*dpr);
+    gctx.strokeRect(Math.floor(10*dpr), Math.floor(10*dpr), W-Math.floor(20*dpr), H-Math.floor(20*dpr));
+
+    const n = (state.scene===SC.C || state.scene===SC.D || state.scene===SC.END) ? 30 : 16;
+    for (let i=0;i<n;i++){
+      const u = (i*97 + state.jumpCount*23) % 1000 / 1000;
+      const v = (i*53 + state.jumpCount*17) % 1000 / 1000;
+      const x = Math.floor((u*1.2 - 0.1) * W);
+      const y = Math.floor((v*1.2 - 0.1) * H);
+      const r = Math.floor((1 + (i%3)) * dpr);
+      gctx.shadowBlur = Math.floor((10 + (i%7)*2)*dpr);
+      gctx.fillStyle = (i%2===0)
+        ? (cold ? 'rgba(46,224,214,0.18)' : 'rgba(108,240,255,0.16)')
+        : 'rgba(255,75,216,0.12)';
+      gctx.fillRect(x,y,r,r);
+    }
+
+    if (state.scene===SC.C || state.scene===SC.D){
+      // C / D 阶段：中间保留一根塔的辉光，强调“通道”
+      gctx.shadowBlur = Math.floor(22*dpr);
+      gctx.shadowColor = cold ? 'rgba(46,224,214,0.45)' : 'rgba(108,240,255,0.45)';
+      gctx.globalAlpha=0.85;
+      drawTower(gctx,0.55,true);
+      gctx.globalAlpha=1;
+    } else if (state.scene===SC.END){
+      // END 阶段：不再单独画一根塔，只留一些向上的竖直拖影
+      gctx.shadowBlur = Math.floor(18*dpr);
+      gctx.shadowColor = 'rgba(108,240,255,0.35)';
+      const stripes = 22;
+      for (let i=0;i<stripes;i++){
+        const u = i/(stripes-1);
+        const x = Math.floor( (0.08 + u*0.84) * W );
+        const wobble = Math.sin((performance.now()/1000)*0.9 + i*0.7) * Math.floor(3*dpr);
+        gctx.globalAlpha = 0.10 + ( (i%3)===0 ? 0.18 : 0.06 );
+        gctx.fillStyle = 'rgba(108,240,255,0.45)';
+        gctx.fillRect(x + wobble, Math.floor(H*0.18), Math.floor(1*dpr), Math.floor(H*0.70));
+      }
+      gctx.globalAlpha = 1;
+    }
+
+    gctx.restore();
+  }
+
+  function render(t){
+    bctx.clearRect(0,0,W,H);
+    if (!state.started){
+      bctx.fillStyle='#05060a';
+      bctx.fillRect(0,0,W,H);
+      bctx.fillStyle='rgba(108,240,255,0.22)';
+      bctx.font=`${Math.floor(14*dpr)}px ui-monospace, monospace`;
+      bctx.fillText("CLICK CONTINUE TO START", Math.floor(16*dpr), Math.floor(H-20*dpr));
+      drawTower(bctx,0.25,true);
+    } else {
+      if (state.scene===SC.END) drawEndScene(bctx, t);
+      else{
+        drawGrid(bctx);
+        if (state.scene===SC.D){
+          bctx.save();
+          bctx.globalAlpha = Math.min(1, Math.max(0, state.towerMode));
+          drawTower(bctx,1,false);
+          bctx.restore();
+        }
+      }
+    }
+    drawGlow();
+    setMetric();
+    refreshChoiceUI();
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+
+  // ---------- INPUT ----------
+  function withinRightZone(clientX){
+    const r = viewEl.getBoundingClientRect();
+    const x = clientX - r.left;
+    return x > r.width * 0.65;
+  }
+  function withinLeftEdge(clientX){
+    const r = viewEl.getBoundingClientRect();
+    const x = clientX - r.left;
+    return x < r.width * 0.18;
+  }
+  function withinRightEdge(clientX){
+    const r = viewEl.getBoundingClientRect();
+    const x = clientX - r.left;
+    return x > r.width * 0.82;
+  }
+
+  function startAccel(){
+    if (!state.started) return;
+    state.accel=true;
+    sys('SYS>','HOLD(RIGHT): ASCEND/ACCEL','bad');
+    if (state.autoJumpTimer) clearInterval(state.autoJumpTimer);
+    state.autoJumpTimer = setInterval(() => { if (state.accel) jump(); }, (state.scene===SC.C ? 80 : 180));
+  }
+  function stopAccel(){
+    state.accel=false;
+    if (state.autoJumpTimer){ clearInterval(state.autoJumpTimer); state.autoJumpTimer=0; }
+  }
+
+  let longPressTimer=null;
+  let pressStart=null;
+  let edgeHoldTimer=null;
+  let edgeSide=null;
+
+  function startEdgeHold(side){
+    if (!state.started) return;
+    if (!(state.scene===SC.C || state.scene===SC.D)) {
+      sys('SYS>', `ESCAPE HOLD IGNORED (ONLY C/D): ${side}`, 'bad');
+      return;
+    }
+    edgeSide = side;
+    if (edgeHoldTimer) clearInterval(edgeHoldTimer);
+    state.escapeHoldMs = 0;
+    sys('SYS>', `ESCAPE HOLD START: ${side}`, 'bad');
+    edgeHoldTimer = setInterval(()=>{
+      state.escapeHoldMs += 100;
+      if (state.escapeHoldMs >= state.escapeTargetMs){
+        triggerEscape(side);
+      }
+    }, 100);
+  }
+  function stopEdgeHold(){
+    if (edgeSide){
+      sys('SYS>', `ESCAPE HOLD CANCEL: ${edgeSide}`, 'bad');
+    }
+    edgeSide=null;
+    if (edgeHoldTimer){ clearInterval(edgeHoldTimer); edgeHoldTimer=null; }
+    state.escapeHoldMs = 0;
+  }
+
+  function triggerEscape(side){
+    stopEdgeHold();
+    sys('SYS>','ESCAPE VECTOR SUBMITTED','bad');
+    sys('SYS>',`VECTOR: HOLD_${side.toUpperCase()}`,'bad');
+    if (audioUnlocked) confirmBeep();
+
+    if (state.scene===SC.C){
+      state.scene = SC.D;
+      state.towerMode = 0.12;
+      sys('SYS>','ROUTE: EXIT_SURFACE','bad');
+      updateSceneText();
+      startGlobalDrone();
+      return;
+    }
+    if (state.scene===SC.D){
+      state.scene = SC.END;
+      sys('SYS>','ESCAPE ACCEPTED','bad');
+      sys('SYS>','DESTINATION: TOWER FIELD','bad');
+      sys('SYS>','JUMP = LAYING BRICKS','bad');
+      updateSceneText();
+      startGlobalDrone();
+      return;
+    }
+  }
+
+  // Any user gesture: try unlock audio
+  document.addEventListener('pointerdown', ()=>unlockAudio(), {passive:true});
+
+  viewEl.addEventListener('pointerdown', (e)=>{
+    if (e.pointerType==='mouse' && e.button!==0) return;
+    if (isModalOpen() || isUiClickTarget(e.target)) return;
+
+    if (withinLeftEdge(e.clientX)){ startEdgeHold('A'); return; }
+    if (withinRightEdge(e.clientX)){ startEdgeHold('D'); return; }
+
+    e.preventDefault();
+    if (viewEl.setPointerCapture) try{ viewEl.setPointerCapture(e.pointerId); } catch(_){}
+    pressStart = {t:performance.now(), x:e.clientX};
+    if (withinRightZone(e.clientX)){
+      longPressTimer = setTimeout(()=>startAccel(), 260);
+    }
+  }, {passive:false});
+
+  viewEl.addEventListener('pointerup', (e)=>{
+    if (isModalOpen() || isUiClickTarget(e.target)) return;
+
+    if (edgeSide){ stopEdgeHold(); return; }
+
+    e.preventDefault();
+    if (longPressTimer){ clearTimeout(longPressTimer); longPressTimer=null; }
+    const wasAccel = state.accel;
+    stopAccel();
+    if (!pressStart) return;
+    const dt = performance.now()-pressStart.t;
+    if (!wasAccel && dt < 260) jump();
+    pressStart=null;
+  }, {passive:false});
+
+  viewEl.addEventListener('pointercancel', ()=>{
+    if (longPressTimer){ clearTimeout(longPressTimer); longPressTimer=null; }
+    stopAccel(); stopEdgeHold(); pressStart=null;
+  }, {passive:true});
+
+  viewEl.addEventListener('click', (e)=>{
+    if (isModalOpen() || isUiClickTarget(e.target)) return;
+    e.preventDefault();
+    jump();
+  }, {passive:false});
+
+  viewEl.addEventListener('touchstart', (e)=>{
+    if (isModalOpen() || isUiClickTarget(e.target)) return;
+    e.preventDefault();
+    if (!state.started) return;
+    const t = e.touches[0];
+    if (withinLeftEdge(t.clientX)){ startEdgeHold('A'); return; }
+    if (withinRightEdge(t.clientX)){ startEdgeHold('D'); return; }
+
+    const r = viewEl.getBoundingClientRect();
+    const x = t.clientX - r.left;
+    if (x > r.width * 0.65){
+      if (longPressTimer) clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(()=>startAccel(), 260);
+    } else {
+      jump();
+    }
+  }, {passive:false});
+
+  viewEl.addEventListener('touchend', (e)=>{
+    if (isModalOpen() || isUiClickTarget(e.target)) return;
+    e.preventDefault();
+    if (longPressTimer){ clearTimeout(longPressTimer); longPressTimer=null; }
+    stopAccel();
+    stopEdgeHold();
+  }, {passive:false});
+
+  btnJump.addEventListener('click', (e)=>{ e.preventDefault(); unlockAudio(); jump(); });
+  btnChoice.addEventListener('click', (e)=>{
+    e.preventDefault();
+    unlockAudio();
+    if (btnChoice.classList.contains('disabled')){ if (audioUnlocked) errorBeep(); sys('SYS>','CHOICE: NOT AVAILABLE','bad'); return; }
+    maybeEnableChoice();
+    showChoiceModal();
+  });
+
+  // Keyboard escape hold
+  let escHoldInterval=null;
+  let escHoldSide=null;
+  function startKeyEscapeHold(side){
+    if (!state.started) return;
+    if (!(state.scene===SC.C || state.scene===SC.D)) return;
+    if (escHoldInterval) return;
+    escHoldSide = side;
+    state.escapeHoldMs = 0;
+    sys('SYS>', `ESCAPE HOLD START: ${side}`, 'bad');
+    escHoldInterval = setInterval(()=>{
+      state.escapeHoldMs += 100;
+      if (state.escapeHoldMs >= state.escapeTargetMs){
+        clearInterval(escHoldInterval); escHoldInterval=null;
+        triggerEscape(side);
+      }
+    },100);
+  }
+  function stopKeyEscapeHold(side){
+    if (escHoldInterval && escHoldSide===side){
+      clearInterval(escHoldInterval); escHoldInterval=null;
+      sys('SYS>', `ESCAPE HOLD CANCEL: ${side}`, 'bad');
+    }
+    escHoldSide=null;
+    state.escapeHoldMs=0;
+  }
+
+  document.addEventListener('keydown', (e)=>{
+    const k=e.key.toLowerCase();
+
+    if (k==='w' || e.key==='ArrowUp'){ e.preventDefault(); unlockAudio(); jump(); }
+    if (k==='e'){ e.preventDefault(); unlockAudio(); observe(); }
+
+    if (k==='a' || e.key==='ArrowLeft'){ e.preventDefault(); unlockAudio(); startKeyEscapeHold('A'); }
+    if (k==='d' || e.key==='ArrowRight'){ e.preventDefault(); unlockAudio(); startKeyEscapeHold('D'); }
+
+    if (e.key==='Escape'){ e.preventDefault(); denyClose(); }
+  }, {passive:false});
+
+  document.addEventListener('keyup', (e)=>{
+    const k=e.key.toLowerCase();
+    if (k==='a' || e.key==='ArrowLeft') stopKeyEscapeHold('A');
+    if (k==='d' || e.key==='ArrowRight') stopKeyEscapeHold('D');
+  }, {passive:true});
+
+  modal.addEventListener('click', (e)=>{
+    if (e.target===modal){
+      if (audioUnlocked) errorBeep();
+      sys('SYS>','MODAL DISMISS: DENIED','bad');
+    }
+  });
+
+  sys('SYS>','SHELL LOADED');
+  sys('SYS>','WINDOW: CLOSE DISABLED','bad');
+  sys('SYS>','AUDIO: LOCKED UNTIL USER GESTURE','bad');
+  updateSceneText();
+  maybeEnableChoice();
+})();
+</script>
+</body>
+</html>
